@@ -1,4 +1,31 @@
-/* Example FreeRTOS config */
+/* Example FreeRTOS config
+ * FreeRTOS Kernel V10.5.0
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * Copyright (C) 2019-2024 Cypress Semiconductor Corporation, or a subsidiary of
+ * Cypress Semiconductor Corporation.  All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * https://www.FreeRTOS.org
+ * https://github.com/FreeRTOS
+ * http://www.infineon.com
+ *
+ */
 
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
@@ -15,7 +42,6 @@
  * See http://www.freertos.org/a00110.html.
  *----------------------------------------------------------*/
 
-#if defined (__ICCARM__) || (__GNUC__)
 #include "cy_utils.h"
 
 /* Get the low power configuration parameters from
@@ -24,15 +50,12 @@
  * CY_CFG_PWR_DEEPSLEEP_LATENCY - Deep Sleep Latency (ms)
  */
 #include "cycfg_system.h"
-#endif
 
 #define configUSE_PREEMPTION                    1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 0
-#if defined (__ICCARM__) || (__GNUC__)
 extern uint32_t SystemCoreClock;
-#endif
 #define configCPU_CLOCK_HZ                      SystemCoreClock
-#define configTICK_RATE_HZ                      ((TickType_t ) 1000)
+#define configTICK_RATE_HZ                      1000u
 #define configMAX_PRIORITIES                    7
 #define configMINIMAL_STACK_SIZE                128
 #define configMAX_TASK_NAME_LEN                 16
@@ -57,7 +80,7 @@ extern uint32_t SystemCoreClock;
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION         1
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
-#define configTOTAL_HEAP_SIZE                   ((size_t )(50*1024))
+#define configTOTAL_HEAP_SIZE                   10240
 #define configAPPLICATION_ALLOCATED_HEAP        0
 
 /* Hook function related definitions. */
@@ -83,72 +106,70 @@ extern uint32_t SystemCoreClock;
 #define configTIMER_TASK_STACK_DEPTH            ( configMINIMAL_STACK_SIZE * 2 )
 
 /*
- Interrupt nesting behavior configuration.
- This is explained here: http://www.freertos.org/a00110.html
+Interrupt nesting behavior configuration.
+This is explained here: http://www.freertos.org/a00110.html
 
- Priorities are controlled by two macros:
- - configKERNEL_INTERRUPT_PRIORITY determines the priority of the RTOS daemon task
- - configMAX_API_CALL_INTERRUPT_PRIORITY dictates the priority of ISRs that make API calls
+Priorities are controlled by two macros:
+- configKERNEL_INTERRUPT_PRIORITY determines the priority of the RTOS daemon task
+- configMAX_API_CALL_INTERRUPT_PRIORITY dictates the priority of ISRs that make API calls
 
- Notes:
- 1. Interrupts that do not call API functions should be >= configKERNEL_INTERRUPT_PRIORITY
- and will nest.
- 2. Interrupts that call API functions must have priority between KERNEL_INTERRUPT_PRIORITY
- and MAX_API_CALL_INTERRUPT_PRIORITY (inclusive).
- 3. Interrupts running above MAX_API_CALL_INTERRUPT_PRIORITY are never delayed by the OS.
- */
+Notes:
+1. Interrupts that do not call API functions should be >= configKERNEL_INTERRUPT_PRIORITY
+   and will nest.
+2. Interrupts that call API functions must have priority between KERNEL_INTERRUPT_PRIORITY
+   and MAX_API_CALL_INTERRUPT_PRIORITY (inclusive).
+3. Interrupts running above MAX_API_CALL_INTERRUPT_PRIORITY are never delayed by the OS.
+*/
 /*
- PSoC 6 __NVIC_PRIO_BITS = 3
+CYW20829 (Cortex-M33) __NVIC_PRIO_BITS = 3
 
- 0 (high)
- 1           MAX_API_CALL_INTERRUPT_PRIORITY 001xxxxx (0x3F)
- 2
- 3
- 4
- 5
- 6
- 7 (low)     KERNEL_INTERRUPT_PRIORITY       111xxxxx (0xFF)
+0 (high)
+1           MAX_API_CALL_INTERRUPT_PRIORITY 001xxxxx (0x3F)
+2
+3
+4
+5
+6
+7 (low)     KERNEL_INTERRUPT_PRIORITY       111xxxxx (0xFF)
 
- !!!! configMAX_SYSCALL_INTERRUPT_PRIORITY must not be set to zero !!!!
- See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
 
- */
+CAT3 XMC devices __NVIC_PRIO_BITS = 6
 
-/* Cortex-M specific definitions. */
-#ifdef __NVIC_PRIO_BITS
-/* __BVIC_PRIO_BITS will be specified when CMSIS is being used. */
-#define configPRIO_BITS             __NVIC_PRIO_BITS
+0 (high)
+1           MAX_API_CALL_INTERRUPT_PRIORITY 000001xx (0x07)
+..
+..
+..
+..
+63 (low)    KERNEL_INTERRUPT_PRIORITY       111111xx (0xFF)
+
+!!!! configMAX_SYSCALL_INTERRUPT_PRIORITY must not be set to zero !!!!
+See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
+
+*/
+
+/* Put KERNEL_INTERRUPT_PRIORITY in top __NVIC_PRIO_BITS bits of CM33 register */
+#define configKERNEL_INTERRUPT_PRIORITY         0xFF
+/*
+Put MAX_SYSCALL_INTERRUPT_PRIORITY in top __NVIC_PRIO_BITS bits of CM33 register
+NOTE For IAR compiler make sure that changes of this macro is reflected in
+file portable\TOOLCHAIN_IAR\COMPONENT_CM33\portasm.s in PendSV_Handler: routine
+*/
+#ifdef COMPONENT_CAT3
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY    0x07
 #else
-#define configPRIO_BITS             3        /* 15 priority levels */
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY    0x3F
 #endif
-
-/* The lowest interrupt priority that can be used in a call to a "set priority"
- function. */
-#define configLIBRARY_LOWEST_INTERRUPT_PRIORITY         0x07
-
-/* The highest interrupt priority that can be used by any interrupt service
- routine that makes calls to interrupt safe FreeRTOS API functions.  DO NOT CALL
- INTERRUPT SAFE FREERTOS API FUNCTIONS FROM ANY INTERRUPT THAT HAS A HIGHER
- PRIORITY THAN THIS! (higher priorities are lower numeric values.) */
-#define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY    5
-
-/* Interrupt priorities used by the kernel port layer itself.  These are generic
- to all Cortex-M ports, and do not rely on any particular library functions. */
-#define configKERNEL_INTERRUPT_PRIORITY         ( configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )
-/* !!!! configMAX_SYSCALL_INTERRUPT_PRIORITY must not be set to zero !!!!
- See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
-#define configMAX_SYSCALL_INTERRUPT_PRIORITY    ( configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )
-
 /* configMAX_API_CALL_INTERRUPT_PRIORITY is a new name for configMAX_SYSCALL_INTERRUPT_PRIORITY
  that is used by newer ports only. The two are equivalent. */
 #define configMAX_API_CALL_INTERRUPT_PRIORITY   configMAX_SYSCALL_INTERRUPT_PRIORITY
+
 
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */
 #define INCLUDE_vTaskPrioritySet                1
 #define INCLUDE_uxTaskPriorityGet               1
 #define INCLUDE_vTaskDelete                     1
-#define INCLUDE_vTaskCleanUpResources           0
 #define INCLUDE_vTaskSuspend                    1
 #define INCLUDE_xResumeFromISR                  1
 #define INCLUDE_vTaskDelayUntil                 1
@@ -211,7 +232,12 @@ extern void vApplicationSleep( uint32_t xExpectedIdleTime );
 #endif
 
 /* Deep Sleep Latency Configuration */
-#if ( CY_CFG_PWR_DEEPSLEEP_LATENCY > 0 )
+#if defined (CY_DEVICE_SECURE) && defined (DEBUG)
+#undef CY_CFG_PWR_DEEPSLEEP_LATENCY
+#define CY_CFG_PWR_DEEPSLEEP_LATENCY            (100UL)
+#endif
+
+#if( CY_CFG_PWR_DEEPSLEEP_LATENCY > 0 )
 #define configEXPECTED_IDLE_TIME_BEFORE_SLEEP   CY_CFG_PWR_DEEPSLEEP_LATENCY
 #endif
 
@@ -228,5 +254,15 @@ extern void vApplicationSleep( uint32_t xExpectedIdleTime );
  * The compatible implementations are also provided by the clib-support library.
  */
 #define configUSE_NEWLIB_REENTRANT              1
+
+/* Deep Sleep Latency Configuration */
+#if defined (TARGET_CY8CKIT_064S0S2_4343W) && defined (DEBUG)
+#undef CY_CFG_PWR_DEEPSLEEP_LATENCY
+#define CY_CFG_PWR_DEEPSLEEP_LATENCY            (100UL)
+#endif
+
+#if( CY_CFG_PWR_DEEPSLEEP_LATENCY > 0 )
+#define configEXPECTED_IDLE_TIME_BEFORE_SLEEP   CY_CFG_PWR_DEEPSLEEP_LATENCY
+#endif
 
 #endif /* FREERTOS_CONFIG_H */
